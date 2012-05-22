@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+	<id>easynetq</id>
+	<title>EasyNetQ</title>
+	<version>0.6.0.0</version>
+	<authors>Unknown</authors>
+	<language>en-US</language>
+	<description>EasyNetQ</description>
+	<dependencies>
+	    <dependency id="Newtonsoft.Json" version="[4.5.4]" />
+	</dependencies>    
+    </metadata>
+    <files>
+	<file src="EasyNetQ.Scheduler\bin\Release\EasyNetQ.dll" target="lib" />
+	<file src="EasyNetQ.Scheduler\bin\Release\EasyNetQ.Scheduler.exe" target="lib" />
+    </files>
+</package>
