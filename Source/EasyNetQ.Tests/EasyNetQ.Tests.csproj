@@ -78,6 +78,7 @@
     <Compile Include="ConventionsTests.cs" />
     <Compile Include="CorrelationIdTests.cs" />
     <Compile Include="DefaultConsumerErrorStrategyTests.cs" />
+    <Compile Include="FairWorkTests.cs" />
     <Compile Include="ExceptionConditionsTests.cs" />
     <Compile Include="InMemoryClient\AdvancedPublishSubscribeTests.cs" />
     <Compile Include="InMemoryClient\BasicPublishSubscribeTests.cs" />
