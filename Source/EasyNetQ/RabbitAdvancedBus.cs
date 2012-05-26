@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using EasyNetQ.Topology;
 using RabbitMQ.Client.Exceptions;
+using RabbitMQ.Client;
 
 namespace EasyNetQ
 {
@@ -114,6 +115,11 @@ namespace EasyNetQ
 
         public void Subscribe<T>(IQueue queue, Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
         {
+            Subscribe(queue, DispatchType.Normal, onMessage);
+        }
+
+        public void Subscribe<T>(IQueue queue, DispatchType dispatchType, Func<IMessage<T>, MessageRecievedInfo, Task> onMessage)
+        {
             if(queue == null)
             {
                 throw new ArgumentNullException("queue");
@@ -123,7 +129,7 @@ namespace EasyNetQ
                 throw new ArgumentNullException("onMessage");
             }
 
-            Subscribe(queue, (body, properties, messageRecievedInfo) =>
+            Subscribe(queue, dispatchType, (body, properties, messageRecievedInfo) =>
             {
                 CheckMessageType<T>(properties);
 
@@ -135,6 +141,11 @@ namespace EasyNetQ
         }
 
         public void Subscribe(IQueue queue, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
+        {
+            Subscribe(queue, DispatchType.Normal, onMessage);
+        }
+
+        public void Subscribe(IQueue queue, DispatchType dispatchType, Func<Byte[], MessageProperties, MessageRecievedInfo, Task> onMessage)
         {
             if (queue == null)
             {
@@ -158,7 +169,7 @@ namespace EasyNetQ
 
                 queue.Visit(new TopologyBuilder(channel));
 
-                channel.BasicQos(0, prefetchCount, false);
+                ConfigureChannelQos(channel, dispatchType);
 
                 var consumer = consumerFactory.CreateConsumer(subscriptionAction, channel, queue.IsSingleUse,
                     (consumerTag, deliveryTag, redelivered, exchange, routingKey, properties, body) =>
@@ -183,6 +194,18 @@ namespace EasyNetQ
             };
 
             AddSubscriptionAction(subscriptionAction);
+        }
+
+        private void ConfigureChannelQos(IModel channel, DispatchType dispatchType)
+        {
+            if (dispatchType == DispatchType.Fair)
+            {
+                channel.BasicQos(0, 1, false);
+            }
+            else
+            {
+                channel.BasicQos(0, prefetchCount, false);
+            }
         }
 
         private void AddSubscriptionAction(SubscriptionAction subscriptionAction)

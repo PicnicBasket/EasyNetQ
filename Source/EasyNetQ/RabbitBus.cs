@@ -69,13 +69,28 @@ namespace EasyNetQ
         {
             Subscribe(subscriptionId, "#", onMessage);
         }
-
+        
+        public void Subscribe<T>(string subscriptionId, DispatchType dispatchType, Action<T> onMessage)
+        {
+            Subscribe(subscriptionId, "#", dispatchType, onMessage);
+        }
+        
         public void Subscribe<T>(string subscriptionId, string topic, Action<T> onMessage)
         {
-            Subscribe(subscriptionId, Enumerable.Repeat(topic, 1), onMessage);
+            Subscribe(subscriptionId, topic, DispatchType.Normal, onMessage);
+        }
+
+        public void Subscribe<T>(string subscriptionId, string topic, DispatchType dispatchType, Action<T> onMessage)
+        {
+            Subscribe(subscriptionId, Enumerable.Repeat(topic, 1), dispatchType, onMessage);
         }
 
         public void Subscribe<T>(string subscriptionId, IEnumerable<string> topics, Action<T> onMessage)
+        {
+            Subscribe(subscriptionId, topics, DispatchType.Normal, onMessage);
+        }
+
+        public void Subscribe<T>(string subscriptionId, IEnumerable<string> topics, DispatchType dispatchType, Action<T> onMessage)
         {
             SubscribeAsync<T>(subscriptionId, topics, msg =>
             {
@@ -105,6 +120,11 @@ namespace EasyNetQ
 
         public void SubscribeAsync<T>(string subscriptionId, IEnumerable<string> topics, Func<T, Task> onMessage)
         {
+            SubscribeAsync(subscriptionId, DispatchType.Normal, topics, onMessage);
+        }
+
+        public void SubscribeAsync<T>(string subscriptionId, DispatchType dispatchType, IEnumerable<string> topics, Func<T, Task> onMessage)
+        {
             if (onMessage == null)
             {
                 throw new ArgumentNullException("onMessage");
@@ -117,7 +137,7 @@ namespace EasyNetQ
             var exchange = Exchange.DeclareTopic(exchangeName);
             queue.BindTo(exchange, topics.ToArray());
 
-            advancedBus.Subscribe<T>(queue, (message, messageRecievedInfo) => onMessage(message.Body));
+            advancedBus.Subscribe<T>(queue, dispatchType, (message, messageRecievedInfo) => onMessage(message.Body));
         }
 
 		private string GetExchangeName<T>()

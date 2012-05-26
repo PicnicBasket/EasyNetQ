@@ -43,7 +43,7 @@ namespace EasyNetQ.Tests
             {
                 var consumerBus = RabbitHutch.CreateBus("host=localhost");
                 this._busList.Add(consumerBus);
-                consumerBus.Subscribe<WorkItem>("consumer", workItem =>
+                consumerBus.Subscribe<WorkItem>("consumer", DispatchType.Normal, workItem =>
                     {
                         Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
 // ReSharper disable AccessToModifiedClosure - in this case it's what we want

@@ -18,6 +18,18 @@ namespace EasyNetQ
         /// <param name="queue">The queue to take messages from</param>
         /// <param name="onMessage">The message handler</param>
         void Subscribe<T>(IQueue queue, Func<IMessage<T>, MessageReceivedInfo, Task> onMessage);
+        
+        /// <summary>
+        /// Subscribe to a stream of messages
+        /// </summary>
+        /// <typeparam name="T">The message type</typeparam>
+        /// <param name="queue">The queue to take messages from</param>
+        /// <param name="dispatchType">
+        /// Controls whether the subscriber receives groups of messages (Normal) or one at a 
+        /// time (Fair)
+        /// </param>
+        /// <param name="onMessage">The message handler</param>
+        void Subscribe<T>(IQueue queue, DispatchType dispatchType, Func<IMessage<T>, MessageReceivedInfo, Task> onMessage);
 
         /// <summary>
         /// Subscribe to raw bytes from the queue.

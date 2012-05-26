@@ -56,6 +56,7 @@
     <Compile Include="DefaultConsumerErrorStrategy.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="EasyNetQConsumer.cs" />
+    <Compile Include="DispatchType.cs" />
     <Compile Include="EasyNetQException.cs" />
     <Compile Include="IAdvancedBus.cs" />
     <Compile Include="IAdvancedPublishChannel.cs" />
