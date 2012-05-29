@@ -118,7 +118,7 @@ namespace EasyNetQ
             Subscribe(queue, DispatchType.Normal, onMessage);
         }
 
-        public void Subscribe<T>(IQueue queue, DispatchType dispatchType, Func<IMessage<T>, MessageRecievedInfo, Task> onMessage)
+        public void Subscribe<T>(IQueue queue, DispatchType dispatchType, Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
         {
             if(queue == null)
             {
@@ -145,7 +145,7 @@ namespace EasyNetQ
             Subscribe(queue, DispatchType.Normal, onMessage);
         }
 
-        public void Subscribe(IQueue queue, DispatchType dispatchType, Func<Byte[], MessageProperties, MessageRecievedInfo, Task> onMessage)
+        public void Subscribe(IQueue queue, DispatchType dispatchType, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
         {
             if (queue == null)
             {

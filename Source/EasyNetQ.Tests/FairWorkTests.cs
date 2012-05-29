@@ -37,7 +37,7 @@ namespace EasyNetQ.Tests
             // change it to 1 in RabbitAdvancedBus to see this test pass
 
             var workItemsProcessed = 0;
-           
+
             // create two consumers that will sleep for the worktime specified
             for (var consumerIndex = 0; consumerIndex < 2; consumerIndex++)
             {
@@ -46,9 +46,9 @@ namespace EasyNetQ.Tests
                 consumerBus.Subscribe<WorkItem>("consumer", DispatchType.Normal, workItem =>
                     {
                         Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
-// ReSharper disable AccessToModifiedClosure - in this case it's what we want
+                        // ReSharper disable AccessToModifiedClosure - in this case it's what we want
                         Interlocked.Increment(ref workItemsProcessed);
-// ReSharper restore AccessToModifiedClosure
+                        // ReSharper restore AccessToModifiedClosure
                     });
             }
 
@@ -78,9 +78,78 @@ namespace EasyNetQ.Tests
             Assert.That(totalTimeInSeconds, Is.LessThan(11));
         }
 
+        [Test, Explicit("Needs a Rabbit instance on localhost to work")]
+        public void ProofOfConcept_SubscribersWithMixedDistributionTypes()
+        {
+            using(new TestSubscriber(DispatchType.Normal))
+            {
+                // this is so the subscriber queue is created
+                // the real subscribers are created below
+                // after all the work has been published
+            }
+
+            const int WorkItemCount = 55;
+            using (var publishChannel = this.bus.OpenPublishChannel())
+            {
+                for (int count = 0; count < WorkItemCount; count++)
+                {
+                    publishChannel.Publish(new WorkItem { WorkTime = 0 });
+                }
+            }
+
+            var subsciber2 = new TestSubscriber(DispatchType.Fair);
+            var subsciber1 = new TestSubscriber(DispatchType.Normal);
+
+            int totalProcessed;
+
+            // Wait for messages to be consumed
+            TimeSpan processingTime = TimeSpan.FromSeconds(0);
+            var startTime = DateTime.Now;
+            var totalWaitTime = TimeSpan.FromSeconds(10);
+            do
+            {
+                totalProcessed = subsciber1.WorkItemsProcessed + subsciber2.WorkItemsProcessed;
+                processingTime = DateTime.Now.Subtract(startTime);
+                Thread.Sleep(TimeSpan.FromMilliseconds(100));
+            }
+            while (totalProcessed < WorkItemCount && processingTime < totalWaitTime);
+
+            Console.WriteLine("Normal: " + subsciber1.WorkItemsProcessed);
+            Console.WriteLine("Fair: " + subsciber2.WorkItemsProcessed);
+            Assert.That(totalProcessed, Is.EqualTo(WorkItemCount));
+
+            // Normal will take the first 50
+            Assert.That(subsciber1.WorkItemsProcessed, Is.EqualTo(50));
+            // Fair subscriber will only get the leftovers
+            Assert.That(subsciber2.WorkItemsProcessed, Is.EqualTo(WorkItemCount - subsciber1.WorkItemsProcessed));
+        }
+
         public class WorkItem
         {
             public int WorkTime { get; set; }
+        }
+    }
+
+    public class TestSubscriber : IDisposable
+    {
+        private int workItemsProcessed;
+
+        public int WorkItemsProcessed { get { return workItemsProcessed; } }
+        private readonly IBus bus;
+
+        public TestSubscriber(DispatchType dispatchType)
+        {
+            this.bus = RabbitHutch.CreateBus("host=localhost");
+            this.bus.Subscribe<FairWorkTests.WorkItem>("consumer", dispatchType, workItem =>
+                {
+                    //Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
+                    Interlocked.Increment(ref workItemsProcessed);
+                });
+        }
+
+        public void Dispose()
+        {
+            this.bus.Dispose();
         }
     }
 }
