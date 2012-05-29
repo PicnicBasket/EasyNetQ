@@ -35,6 +35,8 @@ namespace EasyNetQ
 
         private readonly List<string> topics = new List<string>();
 
+        private ushort? prefetchCount;
+
         public SubscriberConfigurationBuilder WithAsyncHandler<T>(Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
         {
             if (onMessage == null)
@@ -70,7 +72,17 @@ namespace EasyNetQ
 
         public SubscriberConfiguration Build()
         {
-            return new SubscriberConfiguration { Queue = this.queueBuilder(), OnMessage = onMessage };
+            var subscriberConfiguration = new SubscriberConfiguration
+                {
+                    Queue = this.queueBuilder(), 
+                    OnMessage = onMessage
+                };
+
+            if(this.prefetchCount != null)
+            {
+                subscriberConfiguration.PrefetchCount = this.prefetchCount.Value;
+            }
+            return subscriberConfiguration;
         }
 
         public SubscriberConfigurationBuilder WithSubscriptionId<T>(string subscriptionId)
@@ -143,6 +155,12 @@ namespace EasyNetQ
             }
 
             queueBuilder = () => queue;
+            return this;
+        }
+
+        public SubscriberConfigurationBuilder WithPrefetchCount(ushort prefetchCount)
+        {
+           this.prefetchCount = prefetchCount;
             return this;
         }
     }
