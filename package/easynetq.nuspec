@@ -3,13 +3,13 @@
     <metadata>
 	<id>easynetq</id>
 	<title>EasyNetQ</title>
-	<version>0.6.0.2</version>
+	<version>0.6.0.3</version>
 	<authors>Mike Hadlow, Chris Edwards, A Hazelwood</authors>
 	<owners>Mike Hadlow</owners>
 	<language>en-US</language>
 	<description>EasyNetQ</description>
 	<dependencies>
-	    <dependency id="Newtonsoft.Json" version="[4.5.4]" />
+	    <dependency id="Newtonsoft.Json" version="4.5.4" />
 	</dependencies>    
     </metadata>
     <files>
