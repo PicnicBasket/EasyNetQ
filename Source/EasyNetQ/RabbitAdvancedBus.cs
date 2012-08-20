@@ -27,7 +27,9 @@ namespace EasyNetQ
         // setting to zero makes this infinite, but risks an out-of-memory exception.
         // set to 50 based on this blog post:
         // http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
-        private const int prefetchCount = 50; 
+        // todo: andrew browne: make this configurable
+        // temporarily changed to 1 so we distribute work fairly
+        private const int prefetchCount = 1; 
 
         public RabbitAdvancedBus(
             IConnectionFactory connectionFactory,
