@@ -115,7 +115,8 @@ namespace EasyNetQ
                 HostName = hostName,
                 VirtualHost = virtualHost,
                 UserName = username,
-                Password = password
+                Password = password,
+                RequestedHeartbeat = 10
             });
 
             var serializer = new JsonSerializer();
