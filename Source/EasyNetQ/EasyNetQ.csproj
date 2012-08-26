@@ -82,6 +82,7 @@
     <Compile Include="RabbitBus.cs" />
     <Compile Include="RabbitHutch.cs" />
     <Compile Include="RabbitPublishChannel.cs" />
+    <Compile Include="SubscriberConfiguration.cs" />
     <Compile Include="SystemMessages\Error.cs" />
     <Compile Include="SystemMessages\MessageBasicProperties.cs" />
     <Compile Include="SystemMessages\ScheduleMe.cs" />

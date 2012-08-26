@@ -30,6 +30,12 @@ namespace EasyNetQ
         void Subscribe(IQueue queue, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage);
 
         /// <summary>
+        /// Subscribe to a a queue on the bus
+        /// </summary>
+        /// <param name="subscriberSetup">Subscriber configuration</param>
+        void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup);
+
+        /// <summary>
         /// Return a channel for publishing.
         /// </summary>
         /// <returns>IAdvancedPublishChannel</returns>

@@ -20,19 +20,13 @@ namespace EasyNetQ
 
         public const bool NoAck = false;
 
-        // prefetchCount determines how many messages will be allowed in the local in-memory queue
-        // setting to zero makes this infinite, but risks an out-of-memory exception.
-        // set to 50 based on this blog post:
-        // http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
-        private const int prefetchCount = 50; 
-
         public RabbitAdvancedBus(
             IConnectionFactory connectionFactory,
-            SerializeType serializeType, 
-            ISerializer serializer, 
-            IConsumerFactory consumerFactory, 
-            IEasyNetQLogger logger, 
-            Func<string> getCorrelationId, 
+            SerializeType serializeType,
+            ISerializer serializer,
+            IConsumerFactory consumerFactory,
+            IEasyNetQLogger logger,
+            Func<string> getCorrelationId,
             IConventions conventions)
         {
             if (connectionFactory == null)
@@ -114,28 +108,6 @@ namespace EasyNetQ
 
         public void Subscribe<T>(IQueue queue, Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
         {
-            if(queue == null)
-            {
-                throw new ArgumentNullException("queue");
-            }
-            if(onMessage == null)
-            {
-                throw new ArgumentNullException("onMessage");
-            }
-
-            Subscribe(queue, (body, properties, messageRecievedInfo) =>
-            {
-                CheckMessageType<T>(properties);
-
-                var messageBody = serializer.BytesToMessage<T>(body);
-                var message = new Message<T>(messageBody);
-                message.SetProperties(properties);
-                return onMessage(message, messageRecievedInfo);
-            });
-        }
-
-        public void Subscribe(IQueue queue, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
-        {
             if (queue == null)
             {
                 throw new ArgumentNullException("queue");
@@ -144,23 +116,60 @@ namespace EasyNetQ
             {
                 throw new ArgumentNullException("onMessage");
             }
+
+            this.Subscribe(
+                CreateSubscriberConfigurationBuilder()
+                .WithQueue(queue)
+                .WithAsyncHandler(onMessage)
+                .Build()
+            );
+        }
+
+        public void Subscribe(IQueue queue, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
+        {
+            Subscribe(new SubscriberConfiguration { Queue = queue, OnMessage = onMessage });
+        }
+
+        public void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup)
+        {
+            var subscriberConfigurationBuilder = this.CreateSubscriberConfigurationBuilder();
+            subscriberSetup(subscriberConfigurationBuilder);
+
+            Subscribe(subscriberConfigurationBuilder.Build()); 
+        }
+
+        private SubscriberConfigurationBuilder CreateSubscriberConfigurationBuilder()
+        {
+            return new SubscriberConfigurationBuilder(this.serializeType, this.logger, this.serializer, this.conventions);
+        }
+
+        public void Subscribe(SubscriberConfiguration subscriberConfiguration)
+        {
+            if (subscriberConfiguration.Queue == null)
+            {
+                throw new ArgumentNullException("queue");
+            }
+            if (subscriberConfiguration.OnMessage == null)
+            {
+                throw new ArgumentNullException("onMessage");
+            }
             if (disposed)
             {
                 throw new EasyNetQException("This bus has been disposed");
             }
 
-            var subscriptionAction = new SubscriptionAction(queue.IsSingleUse);
+            var subscriptionAction = new SubscriptionAction(subscriberConfiguration.Queue.IsSingleUse);
 
             subscriptionAction.Action = () =>
             {
                 var channel = connection.CreateModel();
-                channel.ModelShutdown += (model, reason) => logger.DebugWrite("Model Shutdown for queue: '{0}'", queue.Name);
+                channel.ModelShutdown += (model, reason) => logger.DebugWrite("Model Shutdown for queue: '{0}'", subscriberConfiguration.Queue.Name);
 
-                queue.Visit(new TopologyBuilder(channel));
+                subscriberConfiguration.Queue.Visit(new TopologyBuilder(channel));
 
-                channel.BasicQos(0, prefetchCount, false);
+                channel.BasicQos(0, subscriberConfiguration.PrefetchCount, false);
 
-                var consumer = consumerFactory.CreateConsumer(subscriptionAction, channel, queue.IsSingleUse,
+                var consumer = consumerFactory.CreateConsumer(subscriptionAction, channel, subscriberConfiguration.Queue.IsSingleUse,
                     (consumerTag, deliveryTag, redelivered, exchange, routingKey, properties, body) =>
                     {
                         var messageRecievedInfo = new MessageReceivedInfo
@@ -172,11 +181,11 @@ namespace EasyNetQ
                             RoutingKey = routingKey
                         };
                         var messsageProperties = new MessageProperties(properties);
-                        return onMessage(body, messsageProperties, messageRecievedInfo);
+                        return subscriberConfiguration.OnMessage(body, messsageProperties, messageRecievedInfo);
                     });
 
                 channel.BasicConsume(
-                    queue.Name,             // queue
+                    subscriberConfiguration.Queue.Name,             // queue
                     NoAck,                  // noAck 
                     consumer.ConsumerTag,   // consumerTag
                     consumer);              // consumer
@@ -187,7 +196,7 @@ namespace EasyNetQ
 
         private void AddSubscriptionAction(SubscriptionAction subscriptionAction)
         {
-            if(subscriptionAction.IsMultiUse)
+            if (subscriptionAction.IsMultiUse)
             {
                 subscribeActions.Add(subscriptionAction);
             }
@@ -205,19 +214,6 @@ namespace EasyNetQ
                 // Looks like the channel closed between our IsConnected check
                 // and the subscription action. Do nothing here, when the 
                 // connection comes back, the subcription action will be run then.
-            }
-        }
-
-        private void CheckMessageType<TMessage>(MessageProperties properties)
-        {
-            var typeName = serializeType(typeof(TMessage));
-            if (properties.Type != typeName)
-            {
-                logger.ErrorWrite("Message type is incorrect. Expected '{0}', but was '{1}'",
-                    typeName, properties.Type);
-
-                throw new EasyNetQInvalidMessageTypeException("Message type is incorrect. Expected '{0}', but was '{1}'",
-                    typeName, properties.Type);
             }
         }
 

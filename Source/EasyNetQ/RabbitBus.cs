@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -67,40 +66,40 @@ namespace EasyNetQ
 
         public void Subscribe<T>(string subscriptionId, Action<T> onMessage)
         {
-            Subscribe(subscriptionId, "#", onMessage);
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithSyncHandler(onMessage));
         }
 
         public void Subscribe<T>(string subscriptionId, string topic, Action<T> onMessage)
         {
-            Subscribe(subscriptionId, Enumerable.Repeat(topic, 1), onMessage);
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithTopic(topic)
+                .WithSyncHandler(onMessage));
         }
 
         public void Subscribe<T>(string subscriptionId, IEnumerable<string> topics, Action<T> onMessage)
         {
-            SubscribeAsync<T>(subscriptionId, topics, msg =>
-            {
-                var tcs = new TaskCompletionSource<object>();
-                try
-                {
-                    onMessage(msg);
-                    tcs.SetResult(null);
-                }
-                catch (Exception exception)
-                {
-                    tcs.SetException(exception);
-                }
-                return tcs.Task;
-            });
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithTopics(topics)
+                .WithSyncHandler(onMessage));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage)
         {
-            SubscribeAsync(subscriptionId, "#", onMessage);
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, string topic, Func<T, Task> onMessage)
         {
-            SubscribeAsync(subscriptionId, Enumerable.Repeat(topic, 1), onMessage);
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithTopic(topic)
+                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, IEnumerable<string> topics, Func<T, Task> onMessage)
@@ -110,25 +109,16 @@ namespace EasyNetQ
                 throw new ArgumentNullException("onMessage");
             }
 
-            var queueName = GetQueueName<T>(subscriptionId);
-            var exchangeName = GetExchangeName<T>();
-
-            var queue = Queue.DeclareDurable(queueName);
-            var exchange = Exchange.DeclareTopic(exchangeName);
-            queue.BindTo(exchange, topics.ToArray());
-
-            advancedBus.Subscribe<T>(queue, (message, messageRecievedInfo) => onMessage(message.Body));
+            advancedBus.Subscribe(builder =>
+                builder.WithSubscriptionId<T>(subscriptionId)
+                .WithTopics(topics)
+                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
         }
 
-		private string GetExchangeName<T>()
-		{
-			return conventions.ExchangeNamingConvention(typeof(T));
-		}
-
-		private string GetQueueName<T>(string subscriptionId)
-		{
-			return conventions.QueueNamingConvention(typeof (T), subscriptionId);
-		}
+        public void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup)
+        {
+            advancedBus.Subscribe(subscriberSetup);
+        }
 
         public void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
         {
