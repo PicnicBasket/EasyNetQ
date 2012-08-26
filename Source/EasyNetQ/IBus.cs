@@ -17,12 +17,6 @@ namespace EasyNetQ
         IPublishChannel OpenPublishChannel();
 
         /// <summary>
-        /// Subscribe to a queue on the bus
-        /// </summary>
-        /// <param name="subscriberSetup">Subscriber configuration</param>
-        void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup);
-
-        /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.
         /// </summary>
         /// <typeparam name="T">The type to subscribe to</typeparam>
@@ -175,5 +169,6 @@ namespace EasyNetQ
         /// </summary>
         IAdvancedBus Advanced { get; }
 
+        void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup);
     }
 }
