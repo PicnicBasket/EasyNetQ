@@ -1,8 +1,9 @@
+using System.Collections.Specialized;
+
 namespace EasyNetQ
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
 
     using EasyNetQ.Topology;
@@ -29,13 +30,15 @@ namespace EasyNetQ
             this.conventions = conventions;
         }
 
-        private Func<IQueue> queueBuilder;
+        private Func<bool, IQueue> queueBuilder;
 
         private Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage;
 
         private readonly List<string> topics = new List<string>();
 
         private ushort? prefetchCount;
+
+        private bool _isHa;
 
         public SubscriberConfigurationBuilder WithAsyncHandler<T>(Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
         {
@@ -74,8 +77,9 @@ namespace EasyNetQ
         {
             var subscriberConfiguration = new SubscriberConfiguration
                 {
-                    Queue = this.queueBuilder(), 
-                    OnMessage = onMessage
+                    Queue = this.queueBuilder(_isHa), 
+                    OnMessage = onMessage,
+                    IsHa = _isHa
                 };
 
             if(this.prefetchCount != null)
@@ -87,12 +91,21 @@ namespace EasyNetQ
 
         public SubscriberConfigurationBuilder WithSubscriptionId<T>(string subscriptionId)
         {
-            this.queueBuilder = () =>
+            this.queueBuilder = (isHa) =>
                 {
                     var queueName = GetQueueName<T>(subscriptionId);
                     var exchangeName = GetExchangeName<T>();
 
-                    var queue = Queue.DeclareDurable(queueName);
+                    IQueue queue;
+                    if(_isHa)
+                    {
+                        queue = Queue.DeclareDurable(queueName, new Dictionary<string,object> { { "x-ha-policy", "all" } });
+                    }
+                    else
+                    {
+                        queue = Queue.DeclareDurable(queueName);
+                    }
+
                     var exchange = Exchange.DeclareTopic(exchangeName);
 
                     var routingKeys = this.topics.Count > 0 ? this.topics.ToArray() : new[] { "#" };
@@ -154,13 +167,23 @@ namespace EasyNetQ
                 throw new ArgumentNullException("queue");
             }
 
-            queueBuilder = () => queue;
+            queueBuilder = (_) => queue;
             return this;
         }
 
         public SubscriberConfigurationBuilder WithPrefetchCount(ushort prefetchCount)
         {
            this.prefetchCount = prefetchCount;
+            return this;
+        }
+
+        /// <summary>
+        /// Configure this queue for High Availability
+        /// </summary>
+        /// <param name="isHa">true if the queue should be High Availability, false otherwise</param>
+        public SubscriberConfigurationBuilder WithHa(bool isHa)
+        {
+            _isHa = isHa;
             return this;
         }
     }
@@ -183,5 +206,7 @@ namespace EasyNetQ
         public Func<byte[], MessageProperties, MessageReceivedInfo, Task> OnMessage { get; set; }
 
         public ushort PrefetchCount { get; set; }
+
+        public bool IsHa { get; set; }
     }
 }

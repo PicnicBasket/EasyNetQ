@@ -80,6 +80,7 @@
     <Compile Include="DefaultConsumerErrorStrategyTests.cs" />
     <Compile Include="FairWorkTests.cs" />
     <Compile Include="ExceptionConditionsTests.cs" />
+    <Compile Include="HaQueueTests.cs" />
     <Compile Include="InMemoryClient\AdvancedPublishSubscribeTests.cs" />
     <Compile Include="InMemoryClient\BasicPublishSubscribeTests.cs" />
     <Compile Include="InMemoryClient\BasicRequestResponseTests.cs" />
