@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.Linq;
 using RabbitMQ.Client;
 
@@ -35,7 +36,7 @@ namespace EasyNetQ.Topology
                 throw new ArgumentException("queueName is null or empty");
             }
 
-            model.QueueDeclare(queueName, durable, exclusive, autoDelete, null);
+            model.QueueDeclare(queueName, durable, exclusive, autoDelete, new ListDictionary() { { "x-ha-policy", "all" } });
         }
 
         public string CreateQueue()
