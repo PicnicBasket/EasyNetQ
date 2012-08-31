@@ -3,7 +3,7 @@
     <metadata>
 	<id>easynetq</id>
 	<title>EasyNetQ</title>
-	<version>0.6.0.7</version>
+	<version>0.6.0.8</version>
 	<authors>Mike Hadlow, Chris Edwards, A Hazelwood</authors>
 	<owners>Mike Hadlow</owners>
 	<language>en-US</language>
@@ -15,6 +15,6 @@
     <files>
 	<file src="EasyNetQ.Scheduler\bin\Release\EasyNetQ.dll" target="lib" />
 	<file src="EasyNetQ.Scheduler\bin\Release\EasyNetQ.Scheduler.exe" target="lib" />
-	<file src="..\package\EasyNetQ.Scheduler.sql" target="content" />
+	<file src="..\Picnic\EasyNetQ.Scheduler.sql" target="content" />
     </files>
 </package>
