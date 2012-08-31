@@ -44,16 +44,14 @@ namespace EasyNetQ.Tests
                 var consumerBus = RabbitHutch.CreateBus("host=localhost");
                 this._busList.Add(consumerBus);
                 consumerBus.Subscribe(
-                    builder =>
-                        builder.WithSubscriptionId<WorkItem>("consumer")
-                        .WithPrefetchCount(1)
-                        .WithSyncHandler<WorkItem>(workItem =>
+                    new SyncSubscriberBuilder<WorkItem>("consumer", workItem =>
                         {
                             Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
                             // ReSharper disable AccessToModifiedClosure - in this case it's what we want
                             Interlocked.Increment(ref workItemsProcessed);
                             // ReSharper restore AccessToModifiedClosure
-                        }));
+                        })
+                        .WithPrefetchCount(1));
             }
 
             // create six uneven work items
@@ -151,24 +149,20 @@ namespace EasyNetQ.Tests
         {
             this.bus = RabbitHutch.CreateBus("host=localhost");
 
-            Action<SubscriberConfigurationBuilder> subscriberSetup = builder =>
+            var syncSubscriber = new SyncSubscriberBuilder<FairWorkTests.WorkItem>(
+                "consumer",
+                workItem =>
                 {
-                    builder
-                        .WithSubscriptionId<FairWorkTests.WorkItem>("consumer")
-                        .WithSyncHandler<FairWorkTests.WorkItem>(
-                            workItem =>
-                            {
-                                Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
-                                Interlocked.Increment(ref workItemsProcessed);
-                            });
+                    Thread.Sleep(TimeSpan.FromSeconds(workItem.WorkTime));
+                    Interlocked.Increment(ref workItemsProcessed);
+                });
 
-                    if (dispatchType == DispatchType.Fair)
-                    {
-                        builder.WithPrefetchCount(1);
-                    }
-                };
+            if (dispatchType == DispatchType.Fair)
+            {
+                syncSubscriber.WithPrefetchCount(1);
+            }
 
-            this.bus.Subscribe(subscriberSetup);
+            this.bus.Subscribe(syncSubscriber);
         }
 
         public void Dispose()

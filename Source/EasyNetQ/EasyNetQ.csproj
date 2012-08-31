@@ -47,6 +47,8 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="AsyncSubscriberBuilder.cs" />
+    <Compile Include="BaseSubscriberConfigurationBuilder.cs" />
     <Compile Include="BinarySerializer.cs" />
     <Compile Include="BusExtensions.cs" />
     <Compile Include="ConcurrentHashSet.cs" />
@@ -68,6 +70,7 @@
     <Compile Include="IPublishChannel.cs" />
     <Compile Include="ISaga.cs" />
     <Compile Include="ISerializer.cs" />
+    <Compile Include="ISubscriberConfigurationBuilder.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Message.cs" />
@@ -82,7 +85,10 @@
     <Compile Include="RabbitBus.cs" />
     <Compile Include="RabbitHutch.cs" />
     <Compile Include="RabbitPublishChannel.cs" />
+    <Compile Include="RawQueueBuilder.cs" />
+    <Compile Include="RawSubscriberBuilder.cs" />
     <Compile Include="SubscriberConfiguration.cs" />
+    <Compile Include="SyncSubscriberBuilder.cs" />
     <Compile Include="SystemMessages\Error.cs" />
     <Compile Include="SystemMessages\MessageBasicProperties.cs" />
     <Compile Include="SystemMessages\ScheduleMe.cs" />

@@ -32,8 +32,8 @@ namespace EasyNetQ
         /// <summary>
         /// Subscribe to a a queue on the bus
         /// </summary>
-        /// <param name="subscriberSetup">Subscriber configuration</param>
-        void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup);
+        /// <param name="subscriberBuilder">Subscriber configuration</param>
+        void Subscribe(ISubscriberConfigurationBuilder subscriberBuilder);
 
         /// <summary>
         /// Return a channel for publishing.

@@ -169,6 +169,6 @@ namespace EasyNetQ
         /// </summary>
         IAdvancedBus Advanced { get; }
 
-        void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup);
+        void Subscribe(ISubscriberConfigurationBuilder subscriberSetup);
     }
 }
