@@ -28,7 +28,7 @@ namespace EasyNetQ.Scheduler.Tests
             throw new NotImplementedException();
         }
 
-        public void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup)
+        public void Subscribe(ISubscriberConfigurationBuilder subscriberSetup)
         {
             throw new NotImplementedException();
         }

@@ -118,10 +118,7 @@ namespace EasyNetQ
             }
 
             this.Subscribe(
-                CreateSubscriberConfigurationBuilder()
-                .WithQueue(queue)
-                .WithAsyncHandler(onMessage)
-                .Build()
+                new RawQueueBuilder<T>(queue, onMessage)
             );
         }
 
@@ -130,17 +127,9 @@ namespace EasyNetQ
             Subscribe(new SubscriberConfiguration { Queue = queue, OnMessage = onMessage });
         }
 
-        public void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup)
+        public void Subscribe(ISubscriberConfigurationBuilder subscriberBuilder)
         {
-            var subscriberConfigurationBuilder = this.CreateSubscriberConfigurationBuilder();
-            subscriberSetup(subscriberConfigurationBuilder);
-
-            Subscribe(subscriberConfigurationBuilder.Build()); 
-        }
-
-        private SubscriberConfigurationBuilder CreateSubscriberConfigurationBuilder()
-        {
-            return new SubscriberConfigurationBuilder(this.serializeType, this.logger, this.serializer, this.conventions);
+            Subscribe(subscriberBuilder.Build(this.serializeType, this.logger, this.serializer, this.conventions)); 
         }
 
         public void Subscribe(SubscriberConfiguration subscriberConfiguration)

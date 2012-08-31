@@ -66,40 +66,27 @@ namespace EasyNetQ
 
         public void Subscribe<T>(string subscriptionId, Action<T> onMessage)
         {
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithSyncHandler(onMessage));
+            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage));
         }
 
         public void Subscribe<T>(string subscriptionId, string topic, Action<T> onMessage)
         {
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithTopic(topic)
-                .WithSyncHandler(onMessage));
+            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopic(topic));
         }
 
         public void Subscribe<T>(string subscriptionId, IEnumerable<string> topics, Action<T> onMessage)
         {
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithTopics(topics)
-                .WithSyncHandler(onMessage));
+            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopics(topics));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage)
         {
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
+            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, string topic, Func<T, Task> onMessage)
         {
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithTopic(topic)
-                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
+            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopic(topic));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, IEnumerable<string> topics, Func<T, Task> onMessage)
@@ -109,13 +96,10 @@ namespace EasyNetQ
                 throw new ArgumentNullException("onMessage");
             }
 
-            advancedBus.Subscribe(builder =>
-                builder.WithSubscriptionId<T>(subscriptionId)
-                .WithTopics(topics)
-                .WithAsyncHandler<T>((message, messageRecievedInfo) => onMessage(message.Body)));
+            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopics(topics));
         }
 
-        public void Subscribe(Action<SubscriberConfigurationBuilder> subscriberSetup)
+        public void Subscribe(ISubscriberConfigurationBuilder subscriberSetup)
         {
             advancedBus.Subscribe(subscriberSetup);
         }
