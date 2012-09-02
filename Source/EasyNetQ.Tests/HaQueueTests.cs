@@ -13,12 +13,11 @@ namespace EasyNetQ.Tests
         {
             var called = false;
             var bus = RabbitHutch.CreateBus("host=localhost");
-
-            var syncSubscriberBuilder = 
-                new SyncSubscriberBuilder<HaMessage>("Test", _ => { called = true; })
-                    .WithHa(true);
             
-            bus.Subscribe(syncSubscriberBuilder);
+            bus.Subscribe<HaMessage>(b =>
+                    b.Queue("Test", q => q.HighAvailability(true))
+                     .Handler( _ => { called = true; })
+                );
 
             using(var publishChannel = bus.OpenPublishChannel())
             {

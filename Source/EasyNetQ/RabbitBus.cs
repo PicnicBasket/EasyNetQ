@@ -66,27 +66,27 @@ namespace EasyNetQ
 
         public void Subscribe<T>(string subscriptionId, Action<T> onMessage)
         {
-            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId).Handler(onMessage));
         }
 
         public void Subscribe<T>(string subscriptionId, string topic, Action<T> onMessage)
         {
-            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopic(topic));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId, q => q.WithTopic(topic)).Handler(onMessage));
         }
 
         public void Subscribe<T>(string subscriptionId, IEnumerable<string> topics, Action<T> onMessage)
         {
-            advancedBus.Subscribe(new SyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopics(topics));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId, q => q.WithTopics(topics)).Handler(onMessage));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage)
         {
-            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId).HandlerAsync(onMessage));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, string topic, Func<T, Task> onMessage)
         {
-            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopic(topic));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId, q => q.WithTopic(topic)).HandlerAsync(onMessage));
         }
 
         public void SubscribeAsync<T>(string subscriptionId, IEnumerable<string> topics, Func<T, Task> onMessage)
@@ -96,12 +96,12 @@ namespace EasyNetQ
                 throw new ArgumentNullException("onMessage");
             }
 
-            advancedBus.Subscribe(new AsyncSubscriberBuilder<T>(subscriptionId, onMessage).WithTopics(topics));
+            advancedBus.Subscribe<T>(b => b.Queue(subscriptionId, q => q.WithTopics(topics)).HandlerAsync(onMessage));
         }
 
-        public void Subscribe(ISubscriberConfigurationBuilder subscriberSetup)
+        public void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration)
         {
-            advancedBus.Subscribe(subscriberSetup);
+            advancedBus.Subscribe(configuration);
         }
 
         public void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
