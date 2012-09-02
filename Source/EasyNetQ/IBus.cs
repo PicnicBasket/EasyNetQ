@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 
 namespace EasyNetQ
 {
+    using EasyNetQ.Topology;
+
     /// <summary>
     /// Provides a simple Publish/Subscribe and Request/Response API for a message bus.
     /// </summary>
@@ -169,6 +171,262 @@ namespace EasyNetQ
         /// </summary>
         IAdvancedBus Advanced { get; }
 
-        void Subscribe(ISubscriberConfigurationBuilder subscriberSetup);
+        /// <summary>
+        /// Subscribe to a a queue on the bus
+        /// </summary>
+        /// <param name="configuration">Subscriber configuration</param>
+        void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration);
+    }
+
+    public interface ISubscriberConfigurer<T>
+    {
+        IConfigurationWithQueue<T> Queue(IQueue queue);
+
+        IConfigurationWithQueue<T> Queue(string consumername, Action<QueueBuilder<T>> queueConfiguration = null);
+
+        ISubscriberConfigurer<T> WithPrefetchCount(ushort prefetchCount);
+    }
+
+    public class QueueBuilder<T>
+    {
+        private readonly string subscriptionId;
+
+        public QueueBuilder(string subscriptionId)
+        {
+            this.subscriptionId = subscriptionId;
+        }
+
+        private bool isHighlyAvailable;
+
+        private readonly List<string> topics = new List<string>();
+
+        public QueueBuilder<T> HighAvailability(bool isHighlyAvailable)
+        {
+            this.isHighlyAvailable = isHighlyAvailable;
+            return this;
+        }
+
+        public QueueBuilder<T> WithTopic(string topic)
+        {
+            topics.Add(topic);
+            return this;
+        }
+
+        public QueueBuilder<T> WithTopics(IEnumerable<string> topics)
+        {
+            this.topics.AddRange(topics);
+            return this;
+        }
+
+        public IQueue Build(BuildConfiguration buildConfiguration)
+        {
+            var queueName = GetQueueName<T>(subscriptionId, buildConfiguration.Conventions);
+            var exchangeName = GetExchangeName<T>(buildConfiguration.Conventions);
+
+            IQueue queue;
+            if (isHighlyAvailable)
+            {
+                queue = Queue.DeclareDurable(queueName, new Dictionary<string, object> { { "x-ha-policy", "all" } });
+            }
+            else
+            {
+                queue = Queue.DeclareDurable(queueName);
+            }
+
+            var exchange = Exchange.DeclareTopic(exchangeName);
+
+            var routingKeys = this.topics.Count > 0 ? this.topics.ToArray() : new[] { "#" };
+
+            queue.BindTo(exchange, routingKeys);
+
+            return queue;
+        }
+
+        private string GetExchangeName<T>(IConventions conventions)
+        {
+            return conventions.ExchangeNamingConvention(typeof(T));
+        }
+
+        private string GetQueueName<T>(string subscriptionId, IConventions conventions)
+        {
+            return conventions.QueueNamingConvention(typeof(T), subscriptionId);
+        }
+
+    }
+
+    public class SubscriberConfigurer<T> : ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder, IConfigurationWithQueue<T>
+    {
+        private Func<BuildConfiguration, IQueue> buildQueue;
+
+        private Func<BuildConfiguration, Func<byte[], MessageProperties, MessageReceivedInfo, Task>> buildMessageHandler;
+
+        // prefetchCount determines how many messages will be allowed in the local in-memory queue
+        // setting to zero makes this infinite, but risks an out-of-memory exception.
+        // set the default to 50 based on this blog post:
+        // http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
+        private ushort prefetchCount = 50; 
+
+        public IConfigurationWithQueue<T> Queue(IQueue queue)
+        {
+            buildQueue = configuration => queue;
+            return this;
+        }
+
+        public IConfigurationWithQueue<T> Queue(string consumername, Action<QueueBuilder<T>> queueConfiguration = null)
+        {
+            var queueBuilder = new QueueBuilder<T>(consumername);
+
+            if (queueConfiguration != null)
+            {
+                queueConfiguration(queueBuilder);
+            }
+            buildQueue = queueBuilder.Build;
+
+            return this;
+        }
+
+
+        public ISubscriberConfigurationBuilder Handler(Action<T> onMessage)
+        {
+            return HandlerAsync(
+                t =>
+                    {
+                        var tcs = new TaskCompletionSource<object>();
+                        try
+                        {
+                            onMessage(t);
+                            tcs.SetResult(null);
+                        }
+                        catch (Exception exception)
+                        {
+                            tcs.SetException(exception);
+                        }
+                        return tcs.Task;
+
+                    });
+        }
+
+        protected void CheckMessageType<TMessage>(MessageProperties properties, SerializeType serializeType, IEasyNetQLogger logger)
+        {
+            var typeName = serializeType(typeof(TMessage));
+            if (properties.Type != typeName)
+            {
+                logger.ErrorWrite("Message type is incorrect. Expected '{0}', but was '{1}'",
+                    typeName, properties.Type);
+
+                throw new EasyNetQInvalidMessageTypeException("Message type is incorrect. Expected '{0}', but was '{1}'",
+                    typeName, properties.Type);
+            }
+        }
+
+        public ISubscriberConfigurationBuilder HandlerAsync(Func<T, Task> onMessage)
+        {
+            return HandlerAsync((message, messageInfo) => onMessage(message.Body));
+        }
+
+        public ISubscriberConfigurationBuilder HandlerAsync(Func<IMessage<T>, MessageReceivedInfo, Task> onMessage)
+        {
+            this.buildMessageHandler = buildConfiguration => (body, properties, messageRecievedInfo) =>
+            {
+                this.CheckMessageType<T>(properties, buildConfiguration.SerializeType, buildConfiguration.Logger);
+
+                var messageBody = buildConfiguration.Serializer.BytesToMessage<T>(body);
+                var message = new Message<T>(messageBody);
+                message.SetProperties(properties);
+                return onMessage(message, messageRecievedInfo);
+            };
+            return this;
+        }
+
+        public ISubscriberConfigurationBuilder HandlerAsync(Func<byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
+        {
+            this.buildMessageHandler = buildConfiguration => onMessage;
+            return this;
+        }
+
+        SubscriberConfiguration ISubscriberConfigurationBuilder.Build(BuildConfiguration buildConfiguration)
+        {
+            return new SubscriberConfiguration
+            {
+                Queue = buildQueue(buildConfiguration),
+                OnMessage = buildMessageHandler(buildConfiguration),
+                PrefetchCount = this.prefetchCount
+            };
+        }
+
+        ISubscriberConfigurer<T> ISubscriberConfigurer<T>.WithPrefetchCount(ushort prefetchCount)
+        {
+            this.prefetchCount = prefetchCount;
+            return this;
+        }
+
+        ISubscriberConfigurationBuilder ISubscriberConfigurationBuilder.WithPrefetchCount(ushort prefetchCount)
+        {
+            this.prefetchCount = prefetchCount;
+            return this;
+        }
+    }
+
+    public class BuildConfiguration
+    {
+        private SerializeType serializeType;
+
+        private IEasyNetQLogger logger;
+
+        private ISerializer serializer;
+
+        private IConventions conventions;
+
+        public BuildConfiguration(SerializeType serializeType, IEasyNetQLogger logger, ISerializer serializer, IConventions conventions)
+        {
+            this.serializeType = serializeType;
+            this.logger = logger;
+            this.serializer = serializer;
+            this.conventions = conventions;
+        }
+
+        public SerializeType SerializeType
+        {
+            get
+            {
+                return this.serializeType;
+            }
+        }
+
+        public IEasyNetQLogger Logger
+        {
+            get
+            {
+                return this.logger;
+            }
+        }
+
+        public ISerializer Serializer
+        {
+            get
+            {
+                return this.serializer;
+            }
+        }
+
+        public IConventions Conventions
+        {
+            get
+            {
+                return this.conventions;
+            }
+        }
+    }
+
+
+    public interface IConfigurationWithQueue<T>
+    {
+        ISubscriberConfigurationBuilder Handler(Action<T> onMessage);
+
+        ISubscriberConfigurationBuilder HandlerAsync(Func<T, Task> onMessage);
+
+        ISubscriberConfigurationBuilder HandlerAsync(Func<byte[], MessageProperties, MessageReceivedInfo, Task> onMessage);
+
+        ISubscriberConfigurationBuilder HandlerAsync(Func<IMessage<T>, MessageReceivedInfo, Task> onMessage);
     }
 }

@@ -23,7 +23,5 @@ namespace EasyNetQ
         public Func<byte[], MessageProperties, MessageReceivedInfo, Task> OnMessage { get; set; }
 
         public ushort PrefetchCount { get; set; }
-
-        public bool IsHa { get; set; }
     }
 }

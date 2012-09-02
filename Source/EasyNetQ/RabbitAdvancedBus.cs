@@ -117,9 +117,7 @@ namespace EasyNetQ
                 throw new ArgumentNullException("onMessage");
             }
 
-            this.Subscribe(
-                new RawQueueBuilder<T>(queue, onMessage)
-            );
+            this.Subscribe<T>(b => b.Queue(queue).HandlerAsync(onMessage));
         }
 
         public void Subscribe(IQueue queue, Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage)
@@ -127,9 +125,11 @@ namespace EasyNetQ
             Subscribe(new SubscriberConfiguration { Queue = queue, OnMessage = onMessage });
         }
 
-        public void Subscribe(ISubscriberConfigurationBuilder subscriberBuilder)
+        public void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration)
         {
-            Subscribe(subscriberBuilder.Build(this.serializeType, this.logger, this.serializer, this.conventions)); 
+            var configurer = new SubscriberConfigurer<T>();
+            var builder = configuration(configurer);
+            Subscribe(builder.Build(new BuildConfiguration(this.serializeType, this.logger, this.serializer, this.conventions)));
         }
 
         public void Subscribe(SubscriberConfiguration subscriberConfiguration)
