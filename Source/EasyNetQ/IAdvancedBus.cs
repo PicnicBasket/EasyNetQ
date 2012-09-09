@@ -4,6 +4,8 @@ using EasyNetQ.Topology;
 
 namespace EasyNetQ
 {
+    using EasyNetQ.Fluent;
+
     /// <summary>
     /// IAdvancedBus is a lower level API than IBus which gives you fined grained control
     /// of routing topology, but keeping the EasyNetQ serialisation, persistent connection,
@@ -33,7 +35,7 @@ namespace EasyNetQ
         /// Subscribe to a a queue on the bus
         /// </summary>
         /// <param name="configuration">Subscriber configuration</param>
-        void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration);
+        void Subscribe<T>(Func<SubscriberBuilder<T>, SubscriberBuilderComplete<T>> configuration);
 
         /// <summary>
         /// Return a channel for publishing.

@@ -48,6 +48,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="BinarySerializer.cs" />
+    <Compile Include="Fluent\BuildConfiguration.cs" />
     <Compile Include="BusExtensions.cs" />
     <Compile Include="ConcurrentHashSet.cs" />
     <Compile Include="ConnectionString.cs" />
@@ -57,18 +58,22 @@
     <Compile Include="Delegates.cs" />
     <Compile Include="EasyNetQConsumer.cs" />
     <Compile Include="EasyNetQException.cs" />
+    <Compile Include="Fluent\SubscriberBuilder.cs" />
+    <Compile Include="Fluent\SubscriberBuilderWithHandler.cs" />
     <Compile Include="IAdvancedBus.cs" />
     <Compile Include="IAdvancedPublishChannel.cs" />
     <Compile Include="IBus.cs" />
+    <Compile Include="Fluent\SubscriberBuilderWithQueue.cs" />
     <Compile Include="IConnectionFactory.cs" />
     <Compile Include="IConsumerErrorStrategy.cs" />
     <Compile Include="IConsumerFactory.cs" />
     <Compile Include="IEasyNetQLogger.cs" />
     <Compile Include="IMessage.cs" />
+    <Compile Include="Fluent\InternalSubscriberBuilder.cs" />
     <Compile Include="IPublishChannel.cs" />
     <Compile Include="ISaga.cs" />
     <Compile Include="ISerializer.cs" />
-    <Compile Include="ISubscriberConfigurationBuilder.cs" />
+    <Compile Include="Fluent\SubscriberBuilderComplete.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Message.cs" />
@@ -77,6 +82,7 @@
     <Compile Include="MessageProperties.cs" />
     <Compile Include="PersistentConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Fluent\QueueBuilder.cs" />
     <Compile Include="QueueingConsumerFactory.cs" />
     <Compile Include="RabbitAdvancedBus.cs" />
     <Compile Include="RabbitAdvancedPublishChannel.cs" />

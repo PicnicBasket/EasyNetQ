@@ -18,6 +18,22 @@
         }
 
         [Test]
+        public void StandardSynchronousSubscriber_HandlerFirst()
+        {
+            var bus = Rhino.Mocks.MockRepository.GenerateStub<IBus>();
+
+            bus.Subscribe<TestMessage>(b => b.Handler(x => { }).Queue("consumerName"));
+        }
+
+        [Test]
+        public void StandardSynchronousSubscriber_PrefetchCountFirst()
+        {
+            var bus = Rhino.Mocks.MockRepository.GenerateStub<IBus>();
+
+            bus.Subscribe<TestMessage>(b => b.WithPrefetchCount(1).Handler(x => { }).Queue("consumerName"));
+        }
+
+        [Test]
         public void StandardSynchronousSubscriberWithQueueTopic()
         {
             var bus = Rhino.Mocks.MockRepository.GenerateStub<IBus>();

@@ -6,6 +6,8 @@ using RabbitMQ.Client.Exceptions;
 
 namespace EasyNetQ
 {
+    using EasyNetQ.Fluent;
+
     public class RabbitAdvancedBus : IAdvancedBus
     {
         private readonly SerializeType serializeType;
@@ -125,9 +127,10 @@ namespace EasyNetQ
             Subscribe(new SubscriberConfiguration { Queue = queue, OnMessage = onMessage });
         }
 
-        public void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration)
+        public void Subscribe<T>(Func<SubscriberBuilder<T>, SubscriberBuilderComplete<T>> configuration)
         {
-            var configurer = new SubscriberConfigurer<T>();
+            var internalSubscriberBuilder = new InternalSubscriberBuilder<T>();
+            var configurer = new SubscriberBuilder<T>(internalSubscriberBuilder);
             var builder = configuration(configurer);
             Subscribe(builder.Build(new BuildConfiguration(this.serializeType, this.logger, this.serializer, this.conventions)));
         }

@@ -7,6 +7,8 @@ using EasyNetQ.Topology;
 
 namespace EasyNetQ
 {
+    using EasyNetQ.Fluent;
+
     public class RabbitBus : IBus
     {
         private readonly SerializeType serializeType;
@@ -99,7 +101,7 @@ namespace EasyNetQ
             advancedBus.Subscribe<T>(b => b.Queue(subscriptionId, q => q.WithTopics(topics)).HandlerAsync(onMessage));
         }
 
-        public void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration)
+        public void Subscribe<T>(Func<SubscriberBuilder<T>, SubscriberBuilderComplete<T>> configuration)
         {
             advancedBus.Subscribe(configuration);
         }

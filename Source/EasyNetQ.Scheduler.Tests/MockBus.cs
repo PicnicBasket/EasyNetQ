@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace EasyNetQ.Scheduler.Tests
 {
+    using EasyNetQ.Fluent;
+
     public class MockBus : IBus
     {
         public void Dispose()
@@ -28,12 +30,7 @@ namespace EasyNetQ.Scheduler.Tests
             throw new NotImplementedException();
         }
 
-        public void Subscribe(ISubscriberConfigurationBuilder subscriberSetup)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Subscribe<T>(Func<ISubscriberConfigurer<T>, ISubscriberConfigurationBuilder> configuration)
+        public void Subscribe<T>(Func<SubscriberBuilder<T>, SubscriberBuilderComplete<T>> configuration)
         {
             throw new NotImplementedException();
         }
@@ -100,6 +97,7 @@ namespace EasyNetQ.Scheduler.Tests
         {
             get { throw new NotImplementedException(); }
         }
+
     }
 }
 
