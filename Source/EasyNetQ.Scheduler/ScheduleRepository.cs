@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using System.Data.Common;
 using System.Threading;
 using EasyNetQ.SystemMessages;
+
+using MySql.Data.MySqlClient;
 
 namespace EasyNetQ.Scheduler
 {
@@ -32,14 +34,16 @@ namespace EasyNetQ.Scheduler
 
         public void Store(ScheduleMe scheduleMe)
         {
-            WithStoredProcedureCommand(insertSql, command =>
-            {
-                command.Parameters.AddWithValue("@WakeTime", scheduleMe.WakeTime);
-                command.Parameters.AddWithValue("@BindingKey", scheduleMe.BindingKey);
-                command.Parameters.AddWithValue("@Message", scheduleMe.InnerMessage);
+            WithStoredProcedureCommand(
+                insertSql,
+                command =>
+                    {
+                        command.Parameters.Add(new MySqlParameter("@WakeTime", scheduleMe.WakeTime));
+                        command.Parameters.Add(new MySqlParameter("@BindingKey", scheduleMe.BindingKey));
+                        command.Parameters.Add(new MySqlParameter("@Message", scheduleMe.InnerMessage));
 
-                command.ExecuteNonQuery();
-            });
+                        command.ExecuteNonQuery();
+                    });
         }
 
         public IList<ScheduleMe> GetPending()
@@ -47,26 +51,33 @@ namespace EasyNetQ.Scheduler
             var scheduledMessages = new List<ScheduleMe>();
             var scheuldeMessageIds = new List<int>();
 
-            WithStoredProcedureCommand(selectSql, command =>
-            {
-                command.Parameters.AddWithValue("@WakeTime", now());
-                command.Parameters.AddWithValue("@rows", configuration.MaximumScheduleMessagesToReturn);
-
-                using(var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
+            WithStoredProcedureCommand(
+                selectSql,
+                command =>
                     {
-                        scheduledMessages.Add(new ScheduleMe
-                        {
-                            WakeTime = reader.GetDateTime(2),
-                            BindingKey = reader.GetString(3),
-                            InnerMessage = reader.GetSqlBinary(4).Value
-                        });
+                        command.Parameters.Add(new MySqlParameter("@WakeTime", now()));
+                        command.Parameters.Add(new MySqlParameter("@rows", configuration.MaximumScheduleMessagesToReturn));
 
-                        scheuldeMessageIds.Add(reader.GetInt32(0));
-                    }
-                }
-            });
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var fileSize = reader.GetBytes(4, 0, null, 0, 0);
+                                var rawData = new byte[fileSize];
+                                reader.GetBytes(4, 0, rawData, 0, (int)fileSize);
+
+                                scheduledMessages.Add(
+                                    new ScheduleMe
+                                        {
+                                            WakeTime = reader.GetDateTime(2),
+                                            BindingKey = reader.GetString(3),
+                                            InnerMessage = rawData
+                                        });
+
+                                scheuldeMessageIds.Add(reader.GetInt32(0));
+                            }
+                        }
+                    });
 
             MarkItemsForPurge(scheuldeMessageIds);
 
@@ -76,37 +87,42 @@ namespace EasyNetQ.Scheduler
         public void MarkItemsForPurge(IEnumerable<int> scheuldeMessageIds)
         {
             // mark items for purge on a background thread.
-            ThreadPool.QueueUserWorkItem(state => 
-                WithStoredProcedureCommand(markForPurgeSql, command =>
-                {
-                    var purgeDate = now().AddDays(configuration.PurgeDelayDays);
+            ThreadPool.QueueUserWorkItem(
+                state => WithStoredProcedureCommand(
+                    markForPurgeSql,
+                    command =>
+                        {
+                            var purgeDate = now().AddDays(configuration.PurgeDelayDays);
 
-                    command.Parameters.AddWithValue("@purgeDate", purgeDate);
-                    var idParameter = command.Parameters.Add("@ID", SqlDbType.Int);
+                    command.Parameters.Add(new MySqlParameter("@purgeDate", purgeDate));
+
+                    var idParameter = new MySqlParameter("@ID", SqlDbType.Int);
+                    command.Parameters.Add(idParameter);
 
                     foreach (var scheduleMessageId in scheuldeMessageIds)
                     {
                         idParameter.Value = scheduleMessageId;
                         command.ExecuteNonQuery();
                     }
-                })
-            );
+                }));
         }
 
         public void Purge()
         {
-            WithStoredProcedureCommand(purgeSql, command =>
-            {
-                command.Parameters.AddWithValue("@rows", configuration.PurgeBatchSize);
-
-                command.ExecuteNonQuery();
-            });
+            WithStoredProcedureCommand(
+                purgeSql,
+                command =>
+                    {
+                        command.Parameters.Add(new MySqlParameter("@rows", configuration.PurgeBatchSize));
+                        command.Parameters.Add(new MySqlParameter("@purgeDate", null));
+                        command.ExecuteNonQuery();
+                    });
         }
 
-        private void WithStoredProcedureCommand(string storedProcedureName, Action<SqlCommand> commandAction)
+        private void WithStoredProcedureCommand(string storedProcedureName, Action<DbCommand> commandAction)
         {
-            using (var connection = new SqlConnection(configuration.ConnectionString))
-            using (var command = new SqlCommand(storedProcedureName, connection))
+            using (var connection = new MySqlConnection(configuration.ConnectionString))
+            using (var command = new MySqlCommand(storedProcedureName, connection))
             {
                 connection.Open();
                 command.CommandType = CommandType.StoredProcedure;

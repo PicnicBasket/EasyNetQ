@@ -20,9 +20,9 @@ namespace EasyNetQ.Scheduler
             return new ScheduleRepositoryConfiguration
             {
                 ConnectionString = ConfigurationManager.ConnectionStrings[connectionStringKey].ConnectionString,
-                PurgeBatchSize = GetIntAppSetting("PurgeBatchSize"),
+                PurgeBatchSize = GetIntAppSetting("PurgeBatchSize") > 0 ? GetIntAppSetting("PurgeBatchSize") : 5,
                 PurgeDelayDays = GetIntAppSetting("PurgeDelayDays"),
-                MaximumScheduleMessagesToReturn = GetIntAppSetting("MaximumScheduleMessagesToReturn")
+                MaximumScheduleMessagesToReturn = GetIntAppSetting("MaximumScheduleMessagesToReturn") > 0 ? GetIntAppSetting("MaximumScheduleMessagesToReturn") : 1000
             };
         }
     }
