@@ -101,7 +101,14 @@ namespace EasyNetQ.Scheduler
 
         private void OnPurgeTimerTick(object state)
         {
-            scheduleRepository.Purge();
+            try
+            {
+                scheduleRepository.Purge();
+            }
+            catch (Exception exception)
+            {
+                log.ErrorWrite("Error in schedule purge\r\n{0}", exception);
+            }
         }
     }
 }
